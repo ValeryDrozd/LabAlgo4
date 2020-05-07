@@ -1,0 +1,10 @@
+C:\Users\moroz\source\repos\LeraAlgoLab3\LeraAlgoLab3\bin\Debug\LeraAlgoLab3.exe.config
+C:\Users\moroz\source\repos\LeraAlgoLab3\LeraAlgoLab3\bin\Debug\LeraAlgoLab3.exe
+C:\Users\moroz\source\repos\LeraAlgoLab3\LeraAlgoLab3\bin\Debug\LeraAlgoLab3.pdb
+C:\Users\moroz\source\repos\LeraAlgoLab3\LeraAlgoLab3\obj\Debug\LeraAlgoLab3.csprojAssemblyReference.cache
+C:\Users\moroz\source\repos\LeraAlgoLab3\LeraAlgoLab3\obj\Debug\LeraAlgoLab3.Properties.Resources.resources
+C:\Users\moroz\source\repos\LeraAlgoLab3\LeraAlgoLab3\obj\Debug\LeraAlgoLab3.csproj.GenerateResource.cache
+C:\Users\moroz\source\repos\LeraAlgoLab3\LeraAlgoLab3\obj\Debug\LeraAlgoLab3.csproj.CoreCompileInputs.cache
+C:\Users\moroz\source\repos\LeraAlgoLab3\LeraAlgoLab3\obj\Debug\LeraAlgoLab3.exe
+C:\Users\moroz\source\repos\LeraAlgoLab3\LeraAlgoLab3\obj\Debug\LeraAlgoLab3.pdb
+C:\Users\moroz\source\repos\LeraAlgoLab3\LeraAlgoLab3\obj\Debug\LeraAlgoLab3.Form1.resources
