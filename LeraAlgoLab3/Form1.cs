@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -28,7 +30,7 @@ namespace LeraAlgoLab3
                 InsertBox.Text = "";
                 bTr.Add(bTr.Root, insval);
             }
-          
+            panel1.Refresh();
         }
 
         private void findBtn_Click(object sender, EventArgs e)
@@ -52,7 +54,7 @@ namespace LeraAlgoLab3
             DelBox.Text = "";
             bTr.Delete(bTr.Root, toDel);
             }
-
+            panel1.Refresh();
         }
 
         private void exitBtn_Click(object sender, EventArgs e)
@@ -60,6 +62,51 @@ namespace LeraAlgoLab3
             String val = InsertBox.Text;
             int insval = Convert.ToInt32(val);
             bTr.Add(bTr.Root, insval);
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        private void panel1_Paint(object sender, PaintEventArgs e)
+        {
+            Graphics g = panel1.CreateGraphics();
+            List<Node>[] lvl = new List<Node>[bTr.height+2];
+            SolidBrush b = new SolidBrush(System.Drawing.Color.Black);
+            Font font = new Font("Arial", 8);
+            for(int i = 1;i<=bTr.height+1;i++)
+            {
+                lvl[i] = new List<Node>();
+            }
+            lvl[1].Add(bTr.Root);
+            for(int i = 1; i < bTr.height; i++)
+            {
+                foreach(Node child in lvl[i])
+                {
+                    for (int j = 0; j < child.c.Count(); j++)
+                        lvl[i + 1].Add(child.c[j]);
+                }
+            }
+            int topHeight = (244 - (22 * bTr.height*2))/2;
+            string line = "";
+            for (int i = 1; i <= bTr.height; i++)
+            {
+                line = "|";
+                for (int j = 0; j <lvl[i].Count(); j++)
+                {
+                    int k = 0;
+                    for ( k = 0; k < lvl[i][j].keys.Count(); k++)
+                        line = line + " " + lvl[i][j].keys[k].ToString() + " |";
+                    for (k = k; k < 2 * bTr.t - 1; k++)
+                        line += " - |";
+                    if(j!=lvl[i].Count() - 1)line += "        |";
+                }
+                int horCoord = (478 - 5 * (line.Length - 1) / 2) / 2;
+                int verCoord = topHeight + (11 * (i + 1));
+                g.DrawString(line,font, b, horCoord, verCoord);
+            }
+
         }
     }
 
@@ -81,29 +128,46 @@ namespace LeraAlgoLab3
     
     class bTree
     {
-        int height;
-        int t = 2;
-         public Node Root = new Node();
+        public int height;
+        public int t = 2;
+        public Node Root = new Node();
         public bTree()
         {
             Root = new Node();
             Root.isRoot = true;
             Root.isLeaf = true;
+            height = 0;
         }
-        public void Add(Node toAdd, int value)
+		int lowerBound(List<int> ls, int val)
+		{
+			int l = 0, r = ls.Count() - 1;
+			if (val > ls[r]) return -1;
+			if (val <= ls[0]) return 0;
+			while (r - l != 1)
+			{
+				int mid = (r + l) / 2;
+				if (ls[mid] <= val) r = mid;
+				else
+					l = mid;
+			}
+			return r;
+		}
+		public void Add(Node toAdd, int value)
         {
+            if (height == 0) height = 1;
             int i = 0;
+            bool added = false;
             for ( i = 0; i < toAdd.keys.Count(); i+=1)
             {
                 if (toAdd.keys[i] > value)
                 {
-                    if (toAdd.isLeaf) toAdd.keys.Insert(i, value);
+                    if (toAdd.isLeaf) { toAdd.keys.Insert(i, value); if (toAdd.keys.Count() > 2 * t - 1) SplitNode(toAdd); }
                     else
                         Add(toAdd.c[i], value);
-                        break;
+                    return;
                 }
             }
-            if (i == 0 || i==toAdd.keys.Count())
+            if (!added && (i == 0 || i==toAdd.keys.Count()))
             {
                if(toAdd.isLeaf) toAdd.keys.Insert(i,value);
                else
@@ -112,35 +176,59 @@ namespace LeraAlgoLab3
             if (toAdd.keys.Count() > 2 * t - 1) SplitNode(toAdd);
 
         }
+
         void SplitNode(Node toSplit)
-        {
-            int MedianKey = toSplit.keys[toSplit.keys.Count() / 2];
-            if (toSplit.Parent == null) toSplit.Parent = new Node();
-            toSplit.Parent.keys.Add(MedianKey);
-            toSplit.Parent.keys.Sort();
-            toSplit.keys.Remove(MedianKey);
-            Node Parent = toSplit.Parent;
-            Node toSplitDouble = new Node();
-            toSplitDouble.Parent = Parent;
-            toSplitDouble.isLeaf = true;
-            for(int i = toSplit.keys.Count() / 2 + 1; i < toSplit.keys.Count(); i++)
-            {
-                toSplitDouble.keys.Add(toSplit.keys[i]);
-            }
-            for(int i = toSplit.c.Count()/2+1; i < toSplit.c.Count(); i++)
-            {
-                toSplitDouble.c.Add(toSplit.c[i]);
-            }
-            toSplit.keys.RemoveRange(toSplit.keys.Count() / 2 + 1,toSplit.keys.Count() - (toSplit.keys.Count() / 2 + 1));
-            if (toSplit.c.Count()!=0)toSplit.c.RemoveRange(toSplit.c.Count() / 2 + 1, toSplit.c.Count() - (toSplit.c.Count() / 2 + 1));
-            if (toSplit.isRoot)
-            {
-                Parent.isRoot = true;
+        {                
+            Node Parent = new Node();
+            int medianKey = toSplit.keys.Count()/2;
+            if (toSplit.Parent == null) {
                 this.Root = Parent;
-                Parent.c.Add(toSplit);
-                height += 1;
+                Parent.isRoot = true;
+                toSplit.isRoot = false;
+                toSplit.Parent = Parent;
+                Parent.isLeaf = false;
+                this.height += 1;
             }
-            Parent.c.Add(toSplitDouble);
+            else
+                Parent = toSplit.Parent;
+            Node copySplit = new Node();
+            copySplit.Parent = toSplit.Parent;
+            copySplit.isLeaf = toSplit.isLeaf;
+            for(int i = toSplit.keys.Count() / 2+1; i < toSplit.keys.Count(); i++)
+            {
+                copySplit.keys.Add(toSplit.keys[i]);
+            }
+            toSplit.keys.RemoveRange(toSplit.keys.Count() / 2 + 1, toSplit.keys.Count() - (toSplit.keys.Count() / 2 + 1));
+            
+            if (toSplit.c.Count() != 0)
+            {
+                for(int i = toSplit.c.Count() / 2 + 1; i < toSplit.c.Count(); i++){
+                    Node currentPush = toSplit.c[i];
+                    currentPush.Parent = copySplit;
+                    copySplit.c.Add(currentPush);
+                }
+                toSplit.c.RemoveRange(toSplit.c.Count() / 2 + 1, toSplit.c.Count() - (toSplit.c.Count() / 2 + 1));
+            }
+            int pushIndex;
+            for (pushIndex = 0; pushIndex < Parent.keys.Count(); pushIndex++)
+            {
+                if (Parent.keys[pushIndex] > toSplit.keys[medianKey]) break;
+            }
+            Parent.keys.Insert(pushIndex, toSplit.keys[medianKey]);
+            toSplit.keys.RemoveAt(medianKey);
+            if (Parent.c.Count() == 0)
+            {
+                    Parent.c.Add(toSplit);
+                    Parent.c.Add(copySplit);
+            }
+            else
+            { 
+                for(int i = 0; i < Parent.c.Count(); i++)
+                {
+                        if (Parent.c[i] == toSplit) {Parent.c.Insert(i+1,copySplit); break; }
+                }
+            }
+            if (Parent.keys.Count() == 2 * this.t)SplitNode(Parent);
         }
 
         public Tuple<int,int> Find(Node current, int val)
@@ -166,40 +254,103 @@ namespace LeraAlgoLab3
             }
             return toReturn;
         }
-
+        
         public void Delete(Node current, int val)
         {
-            Tuple<int, int> toCompare = new Tuple<int, int>(1, 1);
-            int i = 1;
-            if (Find(Root, val) == toCompare) return;
-            for (i = 0; i < current.keys.Count(); i += 1)
-            {
-                if (current.keys[i] == val) { break; }
-                else
-                    if (current.keys[i] > val && current.isLeaf == false)
-                {
-                    Delete(current.c[i - 1], val);
-                }
-            }
-            if (current.isLeaf == true) DeleteLeaf(current, val);
+
+            Tuple<int, int> found = Find(Root, val);
+            if (found.Item1 == -1 && found.Item2==-1) return;
+            int Index = lowerBound(current.keys, val);
+            if (Index == -1) Delete(current.c[current.c.Count() - 1], val);
             else
-                DeleteNonLeaf(current, val);
+            if (current.keys[Index] == val)
+            {
+                if (current.isLeaf) DeleteLeaf(current, val);
+                else
+                    DeleteNonLeaf(current, val);
+            }
+            else
+                Delete(current.c[Index],val);
+            if (current.c.Count < t-1 ) repair(current);
+        }
+        void repair(Node n)
+        {
+            Node Parent = n.Parent;
+            if (Parent == null) return;
+            int ind = Parent.c.IndexOf(n);
+            if (ind != Parent.c.Count() - 1 && Parent.c[ind + 1].c.Count()>=t )
+            {
+                borrowFromNext(Parent,ind);
+            }
+            else
+            if (ind!=0 && Parent.c[ind-1].c.Count()>=t)               
+            {
+                borrowFromPrev(Parent,ind);
+            }
+            else
+            {
+                if (ind!=Parent.c.Count()-1) merge(Parent.c[ind+1],n);
+                else
+                    merge(Parent.c[ind - 1], n);
+            }
+            return;
+        }
+        void borrowFromPrev(Node n,int ind)
+        {
+            Node child = n.c[ind];
+            Node sibl = n.c[ind - 1];
+            child.c.Insert(0,sibl.c[sibl.c.Count() - 1]);
+            child.keys.Insert(0, sibl.keys[sibl.keys.Count() - 1]);
+            sibl.c.RemoveAt(sibl.c.Count() - 1);
+            sibl.keys.RemoveAt(sibl.keys.Count() - 1);
+
+        }
+        void borrowFromNext(Node n,int ind)
+        {
+            Node child = n.c[ind];
+            Node sibl = n.c[ind + 1];
+            child.keys.Add(sibl.keys[0]);
+            child.c.Add(sibl.c[0]);
+            sibl.keys.RemoveAt(0);
+            sibl.c.RemoveAt(0);
+        }
+        int getPred(Node From)
+        {
+            while (!From.isLeaf)
+                From = From.c[From.c.Count() - 1];
+            return From.keys[From.keys.Count() - 1];
+        }
+
+        int getSuc(Node From)
+        {
+            while (!From.isLeaf)
+                From = From.c[0];
+            return From.keys[0];
         }
         void DeleteNonLeaf(Node from,int val)
         {
             int ind = from.keys.IndexOf(val);
-            if (ind-1>=0 && from.c[ind - 1].keys.Count() >= t) { from.keys[ind] = from.c[ind - 1].keys.Last(); Delete(from.c[ind-1],from.keys[ind]); }
+
+            if (from.c[ind].keys.Count() >= t-1)
+            {
+                int pred = getPred(from.c[ind]);
+                from.keys[ind] = pred;
+                Delete(from.c[ind], pred);
+            }
             else
-            if (ind<from.c[ind].keys.Count() && from.c[ind].keys.Count() >= t) { from.keys[ind] = from.c[ind].keys.First();Delete(from.c[ind], from.keys[ind]); }
+            if (from.c[ind + 1].keys.Count() >= t-1)
+            {
+                int suc = getSuc(from.c[ind + 1]);
+                from.keys[ind] = suc;
+                Delete(from.c[ind + 1], suc);
+            }
             else
             {
-                from.keys.Remove(val);
-                merge(from.c[ind], from.c[ind - 1]);
-                from.c.RemoveAt(ind);
-                Delete(from.c[ind - 1], val);
+                merge(from.c[ind+1],from.c[ind]);
+                Delete(from.c[ind], val);
             }
-        }
 
+        }
 
         void merge(Node from,Node to)
         {
@@ -213,42 +364,12 @@ namespace LeraAlgoLab3
                 to.c.Add(from.c[i]);
             }
             from.c.Clear();
+            from.Parent.c.Remove(from);
         }
+
         void DeleteLeaf(Node from,int val)
         {
-            Node parent = from.Parent;
             from.keys.Remove(val);
-            if (from.isRoot == true) return;
-            int ind = parent.c.IndexOf(from);
-            if (ind == 0)
-            {
-               if(from.keys.Count()==t-1 && parent.c[ind+1].keys.Count()==t-1)
-                {
-                    merge(from, parent.c[ind + 1]);
-                    parent.c.RemoveAt(0);
-                    parent.keys.RemoveAt(0);
-                }
-               
-            }
-            else
-            if(ind == parent.c.Count()-1)
-            {
-                if (from.keys.Count() == t - 1 && parent.c[ind - 1].keys.Count() == t - 1)
-                {
-                    merge(from, parent.c[ind - 1]);
-                    parent.c.RemoveAt(ind);
-                    parent.keys.RemoveAt(ind);
-                }
-            }
-            else
-            {
-                if (from.keys.Count() == t - 1 && parent.c[ind - 1].keys.Count() == t - 1 && parent.c[ind + 1].keys.Count() == t - 1)
-                {
-                    merge(from, parent.c[ind - 1]);
-                    parent.c.RemoveAt(ind);
-                    parent.keys.RemoveAt(ind);
-                }
-            }
         }
         public void WriteToFile()
         {
